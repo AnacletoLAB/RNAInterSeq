@@ -1,0 +1,3 @@
+[submodule "rnacentral-etl"]
+	path = rnacentral-etl
+	url = git@github.com:AnacletoLAB/rnacentral-etl.git
