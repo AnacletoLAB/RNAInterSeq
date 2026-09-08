@@ -1,0 +1,509 @@
+
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{url}
+
+\title{GTEx Tissue-Expression Landscape of the RNAInterSEQ ncRNA--ncRNA Interactome}
+\author{RNAInter\_sequenceParser side project}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We link the human non-coding RNAs in the RNAInterSEQ ncRNA--ncRNA interaction
+release (\texttt{interactions\_with\_sequences\_RNA\_RNA\_ncrna\_ncrna\_19-05-2026})
+to their tissue expression profile in GTEx (Genotype-Tissue Expression),
+which profiles postmortem human donor tissue exclusively across
+54 anatomical sites. Of 10,068 unique human ncRNA entities,
+7,772 (77.2\%) were resolved to at least one GENCODE gene known
+to GTEx by chaining together every identifier system already present in the
+dataset (Ensembl Gene ID, NCBI Gene ID via \texttt{gene2ensembl}, miRBase
+mature accession via precursor-locus resolution, circBase accession via host
+gene), with a GENCODE v39/v26 version fallback to recover genes pruned from
+the current annotation. 6,325 of the matched entities (81.4\%)
+are detected at non-zero median TPM in at least one tissue, and isoform-level
+expression is available for 4,058 matched genes. Because a matched
+gene's transcript set can include isoforms unrelated to the specific
+molecule RNAInterSEQ has on record, and because RNAInterSEQ's own sequence
+for an entity is rarely sourced from Ensembl, every candidate transcript's
+sequence was independently fetched from Ensembl and tested against
+RNAInterSEQ's known sequence(s) for that entity: 6,036/8,481
+matched entity-locus pairs (71.2\%) have at least one such
+sequence-confirmed transcript.
+\end{abstract}
+
+\section{Background}
+GTEx (\url{https://gtexportal.org}) profiles RNA-seq from postmortem tissue
+samples donated by human subjects. Its API v2 tissue vocabulary
+(\texttt{tissueSiteDetailId}) enumerates 54 human anatomical sites
+and carries no species axis -- there is no non-human GTEx data to query.
+Every non-\emph{Homo sapiens} entity in the source interaction table is
+therefore out of scope for this analysis by construction.
+
+\section{Methods}
+
+\subsection{Identifier resolution}
+RNAInterSEQ stores each ncRNA entity's external identifiers in per-source
+buckets (Ensembl, NCBI, miRBase, circBase, RNAcentral, GenBank, tRFdb,
+``Other''). GenBank, tRFdb and ``Other'' are empty for every human entity in
+this dataset and are not pursued further. The remaining four are resolved to
+a GTEx-queryable gene symbol or Ensembl Gene ID as follows, tried in this
+order for every entity (all are kept when more than one resolves, since a
+single mature product can derive from more than one genomic locus):
+
+\begin{enumerate}
+  \item \textbf{Ensembl Gene ID} -- queried directly against GTEx
+        \texttt{reference/gene}.
+  \item \textbf{NCBI Gene ID} -- mapped to an Ensembl Gene ID via NCBI's own
+        \texttt{gene2ensembl} table (human rows only).
+  \item \textbf{Gene symbol} -- the entity's own RNAInter symbol, queried
+        directly.
+  \item \textbf{miRBase mature accession} (miRNA category only) -- the
+        precursor locus name(s) producing that mature product are read from
+        \texttt{miRNA.dat}; each precursor name is resolved to its official
+        HGNC/GENCODE symbol with a single batched \texttt{mygene.info}
+        alias lookup (handles irregular naming, e.g.\ \texttt{let-7a-1}
+        $\rightarrow$ \texttt{MIRLET7A1}, not a fixed string transform).
+  \item \textbf{circBase accession} (circRNA category only) -- circBase's
+        own FASTA headers already carry the host gene symbol the circRNA
+        splices from (GENCODE has no circRNA biotype, so circRNAs can only
+        be matched through their linear host gene).
+\end{enumerate}
+
+\subsection{GENCODE version fallback}
+Each candidate symbol/Ensembl ID is tried first at GENCODE v39 (paired with
+the current \texttt{gtex\_v10} dataset), then, only for keys not found, at
+v26 (paired with \texttt{gtex\_v8}). This recovers genes GENCODE has pruned
+out of the current annotation -- 753 entity-locus pairs (470 of
+them entities with \emph{no} v39 record at all) were only resolvable at
+v26.
+
+\subsection{Sequence-level transcript confirmation}
+Matching an entity to a GENCODE gene (above) identifies the right locus, not
+the right \emph{transcript}: a multi-isoform gene can carry dozens of
+GENCODE transcripts, most of them unrelated to the specific molecule
+RNAInterSEQ has on record. There is no shared identifier to resolve this --
+RNAInterSEQ's own sequence for an entity is typically sourced from miRBase,
+NCBI RefSeq, or RNAcentral, not Ensembl -- so the join key has to be the
+sequence itself. For every matched gene, the spliced cDNA sequence of each
+of its GENCODE transcripts is fetched from the Ensembl REST API and tested
+for containment (exact match, or substring in either direction -- handling
+e.g.\ a mature miRNA sequence sitting inside its precursor transcript)
+against the entity's own known sequence(s).
+
+\section{Results}
+
+\subsection{Database composition and scope}
+\begin{sloppypar}
+The source file contains 119,365 ncRNA--ncRNA interaction pairs spanning
+30 species-pair combinations. The dominant species are human
+(81,175 pairs, 68.0\%) and mouse (35,236 pairs, 29.5\%), with the
+remaining 2,954 pairs (2.5\%) covering plant, avian, rat,
+and viral-host contexts (2,509 pairs involve two different species, mostly
+viral miRNA--human lncRNA combinations). Because GTEx profiles exclusively
+postmortem \emph{Homo sapiens} donor tissue, only the 81,175 human--human
+pairs are in scope for this analysis; the full set of 57 columns produced by
+this pipeline (original 33 RNAInterSEQ columns $+$ 24 GTEx annotation columns)
+is stored in \path{human_ncrna_interactions_gtex_annotated.pkl}.
+\end{sloppypar}
+
+\subsection{Coverage funnel}
+\begin{itemize}
+  \item 10,068 unique human ncRNA entities in the 19-05-2026 dataset
+  \item 7,772 (77.2\%) resolved to $\geq 1$ GENCODE gene known to GTEx
+  \item 326 of those resolved to multiple genomic loci (paralogous precursors, mostly miRNA)
+  \item 6,325 (81.4\% of matched) detected at median TPM $>0$ in $\geq 1$ of 54 tissues
+  \item 3,332 matched genes have exactly one annotated transcript; 4,058 have multiple (49,716 unique transcripts total)
+\end{itemize}
+
+\subsection{Match rate by RNAInter category}
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\toprule
+Category & Entities & Matched & Match rate \\
+\midrule
+lncRNA & 5662 & 5532 & 0.977 \\
+miRNA & 3126 & 1063 & 0.340 \\
+pseudo & 649 & 578 & 0.891 \\
+snoRNA & 351 & 345 & 0.983 \\
+circRNA & 179 & 168 & 0.939 \\
+snRNA & 58 & 47 & 0.810 \\
+scaRNA & 18 & 18 & 1.000 \\
+rRNA & 14 & 12 & 0.857 \\
+tRNA & 10 & 8 & 0.800 \\
+ncRNA & 1 & 1 & 1.000 \\
+\bottomrule
+\end{tabular}
+\caption{Entity-level GTEx match rate by RNAInter ncRNA category.}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/Fig1_match_rate_by_category.pdf}
+\caption{GTEx match rate by RNAInter ncRNA category.}
+\end{figure}
+
+\subsection{Which identifier system resolved each match}
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+Resolution method & Entity-locus pairs \\
+\midrule
+ensembl\_id & 5275 \\
+symbol & 1855 \\
+mirbase\_precursor & 1086 \\
+circbase\_host & 150 \\
+ncbi\_to\_ensembl & 112 \\
+rnacentral\_urs & 3 \\
+\bottomrule
+\end{tabular}
+\caption{Entity-locus pairs by resolution method.}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/Fig4_match_method_breakdown.pdf}
+\caption{Contribution of each identifier system to the final match set.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\textwidth]{figures/Fig5_gencode_version_usage.pdf}
+\caption{GENCODE v39/gtex\_v10 vs.\ v26/gtex\_v8 fallback usage.}
+\end{figure}
+
+RNAInter category and GTEx/GENCODE biotype agree for 79.3\% of
+matched entities (primary locus per entity); the main source of disagreement
+is RNAInter ``lncRNA'' entities that GENCODE annotates as protein-coding,
+worth a closer look if category purity matters downstream.
+
+\subsection{Sequence-confirmed transcripts}
+6,036/8,481 matched entity-locus pairs (71.2\%)
+have $\geq 1$ GENCODE transcript whose Ensembl-fetched sequence matches a
+sequence RNAInterSEQ already has on record. For genes that get $\geq 1$
+confirmed transcript, the confirmed set is on average 68.7\% of that
+gene's total annotated transcripts (median 100.0\%) -- i.e.\ this
+step meaningfully narrows multi-isoform genes down to the specific
+isoform(s) RNAInterSEQ has, rather than reporting the whole gene's isoform
+mixture as the entity's expression. Filtering down to only sequence-confirmed
+transcripts keeps 516,186/2,698,542 (transcript,
+tissue) expression rows.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llll}
+\toprule
+Category & Entity-locus pairs & Confirmed & Confirmation rate \\
+\midrule
+lncRNA & 5637 & 4297 & 0.762 \\
+miRNA & 927 & 924 & 0.997 \\
+pseudo & 591 & 391 & 0.662 \\
+snoRNA & 555 & 281 & 0.506 \\
+circRNA & 167 & 23 & 0.138 \\
+snRNA & 164 & 82 & 0.500 \\
+rRNA & 33 & 14 & 0.424 \\
+scaRNA & 22 & 15 & 0.682 \\
+tRNA & 8 & 8 & 1.000 \\
+ncRNA & 1 & 1 & 1.000 \\
+\bottomrule
+\end{tabular}
+\caption{Sequence-confirmation rate by RNAInter ncRNA category (entity-locus level).}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/Fig6_sequence_confirmation_rate.pdf}
+\caption{Sequence-confirmation rate by RNAInter ncRNA category.}
+\end{figure}
+
+Confirmation rate tracks how well a category's typical sequence length and
+provenance line up with GENCODE's annotated transcript boundaries: miRNA is
+near-total (99.7\%, mature sequences are short and almost always found
+verbatim inside their precursor transcript), while circRNA is the lowest
+(13.8\%) because a circRNA's backsplice-junction sequence is, by definition,
+not contiguous in the linear host transcript -- consistent with the
+host-gene-proxy limitation noted below.
+
+\subsection{Tissue specificity}
+Yanai's tau across 54 GTEx tissues, computed for the 6,294 matched
+genes with non-zero expression in at least one tissue: mean 0.826,
+median 0.873 -- most matched ncRNAs are far from uniformly expressed.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/Fig2_tau_distribution.pdf}
+\caption{Distribution of tissue specificity (tau) across matched ncRNA genes.}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llll}
+\toprule
+Gene symbol & Peak tissue & Median TPM & tau \\
+\midrule
+MIR5004 & Testis & 0.444 & 1.000 \\
+5S\_rRNA & Testis & 0.770 & 1.000 \\
+LINC02203 & Testis & 1.844 & 1.000 \\
+U6 & Adrenal Gland & 0.326 & 1.000 \\
+C1orf167-AS1 & Testis & 3.913 & 1.000 \\
+FAM27E5 & Testis & 0.508 & 1.000 \\
+MGC4859 & Testis & 0.263 & 1.000 \\
+LINC02632 & Testis & 0.278 & 1.000 \\
+LINC01309 & Testis & 4.015 & 1.000 \\
+LINC01049 & Testis & 0.309 & 1.000 \\
+LINC01039 & Testis & 0.435 & 1.000 \\
+LINC02530 & Testis & 0.283 & 1.000 \\
+LINC01425 & Testis & 0.274 & 1.000 \\
+LINC01761 & Testis & 0.050 & 1.000 \\
+IQCF5-AS1 & Testis & 4.104 & 1.000 \\
+\bottomrule
+\end{tabular}
+\caption{Top 15 most tissue-specific matched ncRNAs and their peak tissue.}
+\end{table}
+
+\subsection{Transcript multiplicity}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/Fig3_transcripts_per_gene.pdf}
+\caption{Number of annotated GENCODE transcripts per matched ncRNA gene.}
+\end{figure}
+
+\section{Interaction-level tissue expression annotation}
+
+The entity-level GTEx data are joined back to the
+81,175 human--human interaction pairs in the source table
+(both partners \emph{Homo sapiens}) to produce an annotated interaction
+table (\path{human_ncrna_interactions_gtex_annotated.pkl}). For each
+interaction row the table carries, for both partners: the set of
+sequence-confirmed GENCODE transcript IDs (as a per-gene dict), tissue
+specificity (tau), peak tissue, peak median TPM, and the full 54-tissue
+max-TPM vector.
+
+\begin{itemize}
+  \item 54,746 (67.4\%) of pairs have both partners
+        GTEx-matched.
+  \item 31,264 (38.5\%) have both partners
+        sequence-confirmed.
+  \item 2,375 (2.9\%) share $\geq 1$ expressed GTEx tissue
+        (median TPM $> 0$ in both partners).
+  \item Median shared tissues across sequence-confirmed pairs:
+        0 (out of 54) -- reflecting the high tissue
+        specificity of ncRNAs in this dataset (median $\tau = $ 0.873)
+        and the residual miRNA coverage gap.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/Fig6_step5_funnel.pdf}
+\caption{Genes and transcripts before and after sequence-confirmed
+filtering (step 5), broken down by RNAInter ncRNA category.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/Fig7_tissue_coexpression.pdf}
+\caption{Number of co-expressed interaction pairs per GTEx tissue
+(both partners detected at median TPM $> 0$, sequence-confirmed pairs only).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{figures/Fig8_shared_tissue_histogram.pdf}
+\caption{Distribution of the number of shared expressed tissues across
+sequence-confirmed interaction pairs.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/Fig9_category_pair_heatmap.pdf}
+\caption{ncRNA category-pair co-expression landscape. Left: interaction
+count (both GTEx-matched). Right: fraction of pairs with $\geq 1$ shared
+expressed tissue (sequence-confirmed pairs only).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/Fig10_tau_by_category.pdf}
+\caption{Yanai tissue-specificity ($\tau$) distribution per ncRNA category,
+pooled across all interaction partners with GTEx data
+(unique entities; $\tau = 0$ ubiquitous, $\tau = 1$ single-tissue).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{figures/Fig11_peak_tissue_distribution.pdf}
+\caption{Top 20 peak expression tissues across unique interacting ncRNA
+entities (both partners pooled, deduplicated by entity).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\textwidth]{figures/Fig12_tau_partner_scatter.pdf}
+\caption{Tissue-specificity correlation between the two partners of each
+interaction (sequence-confirmed pairs; top 5 category combinations
+highlighted).}
+\end{figure}
+
+\subsection{Biological system grouping}
+\begin{sloppypar}
+To improve interpretability, the 54 GTEx tissue sites are collapsed into
+eight biological systems: CNS (13 tissues), Peripheral nervous (2),
+Cardiovascular (5), GI (10), Reproductive (9), Immune (3), Muscle (1),
+and Other (11 metabolic, urological, and integumentary tissues). For each
+entity, \texttt{ent1\_tissue\_systems} and \texttt{ent2\_tissue\_systems}
+list the systems in which it is detected (median TPM $>0$ across confirmed
+transcripts). For sequence-confirmed interaction pairs,
+\texttt{shared\_tissue\_systems} gives the subset of systems shared by both
+partners. Overall, 2,375 pairs (2.9\%) share expression in at
+least one biological system; the most represented system is
+\textbf{Reproductive} (2,168 pairs), likely driven by the broad
+transcriptional activity of gonadal tissues (testis in particular ranks
+among the highest expressing tissues in GTEx across all gene classes).
+\end{sloppypar}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/Fig13_tissue_system_coexpression.pdf}
+\caption{Left: number of sequence-confirmed co-expressed interaction pairs
+per biological system (54 GTEx tissues collapsed to 8 systems).
+Right: symmetric co-occurrence matrix -- each cell shows how many pairs
+have both partners expressed in system~$A$ \emph{and} system~$B$
+simultaneously (a pair can contribute to multiple cells if both partners
+are expressed across several systems).}
+\end{figure}
+
+\subsection{Interpreting the co-expression rate}
+\begin{sloppypar}
+Two questions arise naturally from the 2.9\% co-expression figure:
+(\emph{i}) does the analysis account for transcripts being expressed across
+multiple tissues simultaneously, and (\emph{ii}) can a transcript be
+co-expressed in a tissue that GTEx simply does not detect?
+
+\textbf{Multi-tissue expression is fully captured.} The analysis does
+\emph{not} compare only peak tissues -- it uses the complete 54-tissue
+max-TPM vector for each entity (columns \texttt{ent1\_tissue\_tpm} /
+\texttt{ent2\_tissue\_tpm}).
+\texttt{shared\_expressed\_tissues} is the intersection of the sets of tissues
+where each partner has median TPM $>0$, across all confirmed transcripts and
+all matched loci. Of the 31,264 sequence-confirmed pairs, 2,375
+(7.6\%) share at least one tissue. Among entities with any GTEx
+expression at all, the median is 39 out of 54 tissues, and
+1,230 entities are expressed in every single GTEx tissue -- so when one
+partner is broadly expressed the method finds overlap even if the other partner
+only peaks in one tissue.
+
+\textbf{GTEx detectability, not tissue incompatibility, drives the low rate.}
+Dissecting the 31,264 sequence-confirmed pairs:
+\begin{itemize}
+  \item 2,375 (7.6\%) -- both partners detected, tissues overlap.
+  \item 28,728 (91.9\%) -- at least one partner shows
+        median TPM $= 0$ across all confirmed transcripts in all 54 GTEx tissues.
+        In most cases ($\sim$68\%) the gene locus is also entirely absent from GTEx;
+        in the remainder ($\sim$32\%) a different isoform of the same gene is
+        detected but the sequence-confirmed isoform matching RNAInterSEQ's record is not.
+        This accounts for \textbf{nearly all} non-co-expressed confirmed pairs.
+  \item 161 (0.5\%) -- both partners detected in GTEx but in
+        non-overlapping tissue sets within GTEx's scope.
+\end{itemize}
+The detectability gap is category-specific: 99.9\% of miRNA entities, 90.3\%
+of snoRNA, 87.1\% of circRNA, and 100\% of tRNA show zero expression across
+all 54 GTEx tissues -- for reasons inherent to how GTEx profiles RNA (see
+Limitations). Only lncRNAs have reasonable coverage (31.7\% undetected).
+The 2.9\% co-expression rate therefore reflects a
+\textbf{conservative lower bound}: interactions involving at least one
+miRNA, snoRNA, circRNA, or tRNA partner are almost never scored as
+co-expressed here regardless of the underlying biology.
+\end{sloppypar}
+
+\section{Limitations}
+\begin{sloppypar}
+\begin{itemize}
+  \item \textbf{miRNA mature/precursor mismatch.} RNAInter stores
+        \emph{mature} miRNA names (e.g.\ \texttt{hsa-miR-101-3p}); GTEx
+        captures bulk poly(A)-selected RNA-seq, which mostly fails to detect
+        the short, rapidly processed mature miRNA at all -- even a correctly
+        matched precursor (pri-miRNA) locus typically shows near-zero TPM.
+        Some mature products also lack any HGNC-approved host gene symbol
+        and cannot be resolved by this pipeline at all.
+  \item \textbf{GTEx bulk RNA-seq averaging and isoform specificity.} GTEx
+        profiles bulk RNA from heterogeneous tissue biopsies. A transcript
+        expressed in a minority cell population (e.g.\ Purkinje cells within
+        cerebellum, or interstitial cells within testis) may be diluted below
+        detection threshold in the bulk signal and appear at TPM\,$= 0$ even
+        in the tissue where it is most relevant. Additionally, the
+        sequence-confirmed isoform can be non-dominant: $\sim$32\% of
+        zero-tissue confirmed entities have gene-level GTEx expression in at
+        least one tissue but zero TPM for the specific isoform matching
+        RNAInterSEQ's sequence record. Both effects contribute to the
+        dominant reason the co-expression rate is low: 28,728
+        (91.9\%) of sequence-confirmed pairs have at least one
+        partner with zero TPM across all confirmed transcripts in all 54 GTEx
+        tissues, compared with only 161 (0.5\%) pairs where
+        both partners are detected but in non-overlapping tissue sets.
+  \item \textbf{GTEx tissue panel is not exhaustive.} The 54-tissue
+        vocabulary covers major adult solid organs and blood but omits
+        important tissue contexts where ncRNA activity has been reported:
+        placenta, bone marrow, lymph node, tonsil, retina, cornea, and
+        synovial tissue, among others. A co-expressed pair in any of these
+        contexts will not be captured, and the \texttt{shared\_tissue\_systems}
+        field will list those systems as absent for both partners.
+        GTEx also captures only adult postmortem donors, missing
+        developmental and foetal expression programmes.
+  \item \textbf{circRNA host-gene proxy.} A circRNA's expression here is its
+        \emph{linear host gene's} expression, not the circularized isoform's
+        -- GENCODE has no circRNA biotype, so this is the closest available
+        proxy, not a direct measurement.
+  \item \textbf{RNAcentral, GenBank, tRFdb, ``Other'' buckets not pursued.}
+        The latter three are empty for every human entity in this dataset.
+        RNAcentral URS IDs are populated for most entities but resolving them
+        to GENCODE genes would require downloading RNAcentral's full
+        \texttt{id\_mapping.tsv.gz} (hundreds of MB) for marginal gains once
+        Ensembl/NCBI/miRBase/circBase resolution is exhausted; left as future
+        work if residual unmatched entities are specifically needed.
+  \item \textbf{Multi-locus aggregation.} Entities resolved to more than one
+        genomic locus (paralogous miRNA precursors, or symbol/Ensembl keys
+        landing on distinct historical GENCODE records) are kept as separate
+        rows rather than collapsed into one number; downstream consumers
+        should decide whether to sum, average, or enumerate per locus.
+  \item \textbf{Sequence confirmation is exact/containment-based, not
+        alignment-based.} A transcript that differs from RNAInterSEQ's
+        sequence by even one base (a different assembly patch, a SNP-bearing
+        haplotype, a slightly trimmed UTR) will not be confirmed, even though
+        it is almost certainly the same biological isoform -- the
+        sub-100\% confirmation rates for snoRNA/snRNA/rRNA likely reflect
+        this rather than a true absence of the transcript in GENCODE. A
+        fuzzy/alignment-based fallback (as already used elsewhere in this
+        repository, see \texttt{similarity\_computation.py}) would recover
+        some of these at the cost of one pairwise alignment per candidate
+        transcript.
+\end{itemize}
+\end{sloppypar}
+
+\section{Data availability}
+\begin{sloppypar}
+All intermediate and final tables are saved as pandas pickles under
+\texttt{gtex\_ncrna\_expression/data/}:
+\begin{itemize}
+  \item \path{ncrna_entities_human.pkl} -- the entity table built in step 1
+  \item \path{gtex_gene_matches.pkl} -- the long entity-locus match table from step 2
+  \item \path{gtex_gene_expression.pkl} / \path{gtex_transcript_expression.pkl} -- raw GTEx median TPM, gene and transcript level
+  \item \path{ncrna_entity_locus_summary.pkl} -- the merged, analysis-ready table from step 3, including a \texttt{sequence\_confirmed} flag from step 5
+  \item \path{ncrna_locus_transcript_matches.pkl} -- per (entity, gene, transcript) sequence-confirmation detail from step 5
+  \item \path{gtex_transcript_expression_sequence_confirmed.pkl} -- the transcript-expression table filtered to only sequence-confirmed transcripts
+  \item \path{human_ncrna_interactions_gtex_annotated.pkl} -- the 81,175 human--human interaction rows annotated with per-entity GTEx tissue expression metadata (step 6); includes \texttt{ent1\_*/ent2\_*} columns for confirmed transcripts, tau, peak tissue, the 54-tissue TPM vector, and per-entity biological system lists (\texttt{tissue\_systems}), plus \texttt{shared\_expressed\_tissues} and \texttt{shared\_tissue\_systems}
+\end{itemize}
+Raw GTEx/mygene.info API responses are cached under \texttt{gtex\_ncrna\_expression/cache/}.
+\end{sloppypar}
+
+\end{document}

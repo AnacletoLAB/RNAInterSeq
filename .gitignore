@@ -209,3 +209,31 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ---------------------------------------------------------------
+# Data, releases and heavy intermediates -- never commit these.
+# The dataset is distributed via Zenodo, not through this repository.
+# ---------------------------------------------------------------
+
+# Zenodo publication package (assembled locally, uploaded by hand)
+zenodo_release/
+
+# Raw inputs, intermediates and released tables
+data/
+*.pkl
+*.obo
+*.fa
+*.fasta
+
+# Per-analysis outputs
+rnakg_non_overlapping/data/
+gtex_ncrna_expression/data/
+gtex_ncrna_expression/cache/
+gtex_ncrna_expression/figures/
+gtex_ncrna_expression/*.pdf
+
+# Manuscript (kept out of the public code repository)
+latex_paper/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
