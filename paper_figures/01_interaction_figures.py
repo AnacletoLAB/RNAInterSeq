@@ -6,6 +6,12 @@ Changes with respect to the notebook versions:
     length, GO_distribution, transcript count panels, transcript_pairwise_id;
   * predicted_evidence_type: tight bounding box so the method labels are no
     longer truncated on the left margin;
+  * the top/right frame lines are gone from every panel. They were never
+    intended: rcParams already asked for axes.spines.top/right = False, but
+    sns.set_style("white") ran afterwards and turned all four spines back on;
+  * Fig7 species entropy: computed on the >=100-instance subset (df_f) as in the
+    notebook; an earlier revision of this script used the unfiltered frame,
+    which inflated the entropy of the small-n species;
   * GO panels keep the ordering/colour and computed-label fixes already applied.
 Panels that are not frequencies (medians, boxplots, entropy, scatter) keep their
 original scale; they are re-exported so the whole set comes from one run.
@@ -21,10 +27,12 @@ def log(*a): print(f"[{time.time()-t0:7.1f}s]", *a, flush=True)
 
 MD="data/mrna_stats_union/"; ND="data/ncrna_stats_union/"
 os.makedirs(MD, exist_ok=True); os.makedirs(ND, exist_ok=True)
+# NB: sns.set_style("white") riaccende tutti e quattro gli spine, per cui va
+# applicato PRIMA di rcParams, altrimenti annulla axes.spines.top/right (GV)
+sns.set_style("white")
 mpl.rcParams.update({"figure.figsize":(7,5),"figure.dpi":300,"axes.labelsize":18,
     "axes.titlesize":20,"xtick.labelsize":14,"ytick.labelsize":14,
     "axes.spines.top":False,"axes.spines.right":False,"font.family":"sans-serif"})
-sns.set_style("white")
 COLOR_TYPE="#4C72B0"; COLOR_SPECIES="#DD8452"; COLOR_LENGTH="#6E6E6E"
 COLOR_ENTROPY="#937860"; PASTEL_COLOR="#A6CEE3"; PASTEL_SIM="#B2DF8A"; PASTEL_BOX="#FDBF6F"
 GO_ORDER=["BP","MF","CC","Unknown"]
@@ -125,9 +133,13 @@ for tag, OUT, sub in [("mRNA", MD, df_all[is_m]), ("ncRNA", ND, df_all[~is_m])]:
     plt.tight_layout(); plt.savefig(OUT+"Fig4_transcript_length_log_distribution.pdf", bbox_inches="tight"); plt.close()
     log("  Fig4 done (proportion)")
 
-    # --- Fig7 species entropy (entropy: unchanged) ---
-    sp15=sub["sp_pair"].value_counts().head(15).index
-    ev=[entropy(sub[sub["sp_pair"]==s]["type_pair"].value_counts()) for s in sp15]
+    # --- Fig7 species entropy (entropy: unchanged scale) ---
+    # NB: computed on df_f, the >=100-instance subset, exactly as the notebook
+    # does and as the >=100 scope stated in the text requires. Using the
+    # unfiltered frame here inflates the entropy of small-n species, because the
+    # rare biotype pairs that the filter removes are concentrated there.
+    sp15=df_f["sp_pair"].value_counts().head(15).index
+    ev=[entropy(df_f[df_f["sp_pair"]==s]["type_pair"].value_counts()) for s in sp15]
     es=pd.Series(ev, index=[f"{a}–{b}" for a,b in sp15]).sort_values()
     plt.figure()
     sns.barplot(x=es.values, y=list(es.index), hue=list(es.index),
@@ -176,6 +188,11 @@ for tag, OUT, sub in [("mRNA", MD, df_all[is_m]), ("ncRNA", ND, df_all[~is_m])]:
     log("  GO_annotations_boxplot done")
 
     # --- evidence-method panels (already percentages; fix truncation) ---
+    # NB: experimental_evidence_type.pdf is deliberately NOT regenerated here.
+    # The notebook builds it from a hand-curated method -> category map, not from
+    # a plain split of an evidence field, and the underlying strong/weak strings
+    # are untouched by the rebuild; reproducing that map here would risk
+    # silently diverging from it. That panel stays the notebook output.
     for field, fname, pal in [("predict","predicted_evidence_type.pdf","coolwarm")]:
         meth=sub[field].fillna("").str.split("//")
         ex=meth[sub[field].notna()].explode()

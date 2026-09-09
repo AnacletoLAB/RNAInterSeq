@@ -8,10 +8,11 @@ import seaborn as sns, pandas as pd, numpy as np, time, os
 t0=time.time()
 def log(*a): print(f"[{time.time()-t0:7.1f}s]", *a, flush=True)
 MD="data/mrna_stats_union/"; ND="data/ncrna_stats_union/"
+# set_style va PRIMA di rcParams: "white" riaccende tutti e quattro gli spine
+sns.set_style("white")
 mpl.rcParams.update({"figure.figsize":(7,5),"figure.dpi":300,"axes.labelsize":18,
     "axes.titlesize":20,"xtick.labelsize":16,"ytick.labelsize":16,
     "axes.spines.top":False,"axes.spines.right":False,"font.family":"sans-serif"})
-sns.set_style("white")
 PASTEL_COLOR="#A6CEE3"; PASTEL_SIM="#B2DF8A"; PASTEL_BOX="#FDBF6F"
 bin_labels=["1","2","3–5","6–10",">10"]
 def b(n): return "1" if n==1 else "2" if n==2 else "3–5" if 3<=n<=5 else "6–10" if 6<=n<=10 else ">10"
@@ -58,7 +59,7 @@ for tag, OUT, ents_f, sim_f, cnt_names in [
     st["log_n_pairs"]=np.log10(st["n_pairs"]+1)
     plt.figure(figsize=(7,5), dpi=300)
     sns.scatterplot(x="log_n_pairs", y="mean_sim", hue="bin", hue_order=bo,
-                    palette="Set2", data=st, alpha=0.7, s=12, edgecolor=None)
+                    palette="Set2", data=st, alpha=0.7)
     plt.xlabel("log10(number of transcript pairs + 1)"); plt.ylabel("Mean pairwise identity")
     plt.legend(title="Transcript bin", fontsize=9, title_fontsize=10)
     plt.tight_layout(); plt.savefig(OUT+"transcript_id_vs_pairs.pdf", bbox_inches="tight"); plt.close()

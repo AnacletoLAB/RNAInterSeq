@@ -22,6 +22,15 @@ differ from the notebook versions in three respects:
 3. **Tight bounding box on export.** `predicted_evidence_type` called neither
    `tight_layout()` nor `bbox_inches="tight"`, which truncated the longest
    method labels on the left margin.
+4. **Top and right frame lines removed.** Both scripts set
+   `axes.spines.top/right = False`, but called `sns.set_style("white")`
+   afterwards, which turns all four spines back on. `set_style` now runs first,
+   so the panels match the notebook originals, which never called it.
+
+`experimental_evidence_type.pdf` is deliberately not regenerated. The notebook
+builds it from a hand-curated method-to-category map rather than from a plain
+split of an evidence field, and the strong/weak evidence strings it summarises
+are untouched by the rebuild, so that panel remains the notebook output.
 
 The notebooks are left as the record of the original analysis; these scripts are
 the provenance of the panels that appear in the paper.
