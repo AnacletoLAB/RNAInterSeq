@@ -41,7 +41,11 @@ Run the notebooks in order from the repository root.
 Statistics and figures: `ncRNAInter_stats.ipynb`, `mRNAInter_stats.ipynb`.
 The `*_union.ipynb` copies are the same notebooks pointed at the current
 release, used to regenerate the figures after the mapping change described
-below.
+below. `paper_figures/` holds the scripts that produce the panels as they
+appear in the manuscript: frequency panels report relative frequencies rather
+than absolute counts, and two plotting defects present in the notebooks (GO
+domain bars drawn in `Counter` insertion order against a fixed colour list, and
+hardcoded interaction counts in the GO boxplot labels) are corrected there.
 
 ### Sub-analyses
 
