@@ -41,7 +41,8 @@ the provenance of the panels that appear in the paper.
 python 00_ncrna_similarity.py     # ncRNA transcript-similarity table (only if absent)
 python 01_interaction_figures.py  # interaction-level panels, both subsets
 python 02_entity_figures.py       # entity-level panels, both subsets
-python 03_flow_diagram.py <out.png>
+python 03_flow_diagram.py <out.png>   # fig/flow_RNA_RNA_inter.png
+python 04_entity_diagram.py <out.png> # fig/RNA_entities_plot.png
 ```
 
 Steps 01–02 write into `data/mrna_stats_union/` and `data/ncrna_stats_union/`;
