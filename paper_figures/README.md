@@ -27,6 +27,17 @@ differ from the notebook versions in three respects:
    afterwards, which turns all four spines back on. `set_style` now runs first,
    so the panels match the notebook originals, which never called it.
 
+`00b` replaces the entity tables built inside the stats notebooks
+(`data/entities_union_*.pkl`, `df_step3_*_with_similarity.pkl`), which keyed
+entities by (symbol, biotype, species *name*) and dropped the identifier
+component (`make_entity_key` received the `Raw_ID` string, not a list). That
+double-counted dog, listed by RNAInter under two names for taxid 9615, and
+merged entities differing only by identifier: 176,444 "entities" for the
+mRNA-associated subset of a dataset with 174,248 entities in total. The
+by-key tables give 168,329 and 14,631 entities; per-entity alignments are
+reused wherever the transcript set is unchanged. `01` also merges the two dog
+names before counting species pairs.
+
 `experimental_evidence_type.pdf` is deliberately not regenerated. The notebook
 builds it from a hand-curated method-to-category map rather than from a plain
 split of an evidence field, and the strong/weak evidence strings it summarises
@@ -39,6 +50,7 @@ the provenance of the panels that appear in the paper.
 
 ```
 python 00_ncrna_similarity.py     # ncRNA transcript-similarity table (only if absent)
+python 00b_entity_tables_by_key.py  # entity tables keyed by (symbol, biotype, taxid, ids) + similarity
 python 01_interaction_figures.py  # interaction-level panels, both subsets
 python 02_entity_figures.py       # entity-level panels, both subsets
 python 03_flow_diagram.py <out.png>   # fig/flow_RNA_RNA_inter.png

@@ -41,6 +41,11 @@ GO_COLORS={"BP":"skyblue","MF":"salmon","CC":"lightgreen","Unknown":"lightgrey"}
 PATH=sorted(glob.glob("data/interactions_with_sequences_RNA_RNA_union_*.pkl"))[-1]
 log("loading", os.path.basename(PATH))
 df_all=pd.read_pickle(PATH)
+# Species pairs are counted by NCBI taxid: RNAInter lists dog both as "Canis familiaris" and
+# "Canis lupus familiaris" (taxid 9615); use the NCBI Taxonomy name for both.
+NCBI_NAME={"9615":"Canis lupus familiaris"}
+for c in ("1","2"):
+    df_all[f"Species{c}"]=[NCBI_NAME.get(str(t),n) for t,n in zip(df_all[f"Species{c}_TaxID"],df_all[f"Species{c}"])]
 is_m=df_all.Category1.eq("mRNA")|df_all.Category2.eq("mRNA")
 log("rows:", len(df_all))
 
@@ -141,11 +146,14 @@ for tag, OUT, sub in [("mRNA", MD, df_all[is_m]), ("ncRNA", ND, df_all[~is_m])]:
     sp15=df_f["sp_pair"].value_counts().head(15).index
     ev=[entropy(df_f[df_f["sp_pair"]==s]["type_pair"].value_counts()) for s in sp15]
     es=pd.Series(ev, index=[f"{a}–{b}" for a,b in sp15]).sort_values()
-    plt.figure()
+    # explicit margins as in the notebook (tight_layout cannot fit the long
+    # species-pair labels and the axes were clipped on the right)
+    fig,ax=plt.subplots(figsize=(7,5))
     sns.barplot(x=es.values, y=list(es.index), hue=list(es.index),
-                palette=[COLOR_ENTROPY]*len(es), legend=False)
-    plt.xlabel("Interaction-biotype entropy")
-    plt.tight_layout(); plt.savefig(OUT+"Fig7_species_entropy.pdf", bbox_inches="tight"); plt.close()
+                palette=[COLOR_ENTROPY]*len(es), legend=False, ax=ax)
+    ax.set_xlim(0, max(es.max()*1.25, 0.1)); ax.set_xlabel("Interaction-biotype entropy"); ax.set_ylabel("")
+    fig.subplots_adjust(left=0.38, right=0.97, top=0.95, bottom=0.15)
+    plt.savefig(OUT+"Fig7_species_entropy.pdf", bbox_inches="tight"); plt.close()
     log("  Fig7 done")
 
     # --- GO: aggregate and per-interaction status ---

@@ -17,10 +17,14 @@ PASTEL_COLOR="#A6CEE3"; PASTEL_SIM="#B2DF8A"; PASTEL_BOX="#FDBF6F"
 bin_labels=["1","2","3–5","6–10",">10"]
 def b(n): return "1" if n==1 else "2" if n==2 else "3–5" if 3<=n<=5 else "6–10" if 6<=n<=10 else ">10"
 
+# Entity tables keyed by the pipeline entity key (symbol, biotype, taxid, ids), produced by
+# 00b_entity_tables_by_key.py. The earlier data/entities_union_*.pkl tables were keyed by
+# species *name* without identifiers, which double-counted dog (two names, one taxid) and
+# merged entities differing only by identifier -- see 00b for details.
 for tag, OUT, ents_f, sim_f, cnt_names in [
-    ("mRNA",  MD, "data/entities_union_mrna.pkl",  "data/df_step3_union_with_similarity.pkl",
+    ("mRNA",  MD, "data/entities_bykey_mrna.pkl",  "data/df_step3_bykey_mrna_with_similarity.pkl",
      ["transcripts_counts.pdf","transcripts-count-m.pdf"]),
-    ("ncRNA", ND, "data/entities_union_ncrna.pkl", "data/df_step3_ncrna_with_similarity.pkl",
+    ("ncRNA", ND, "data/entities_bykey_ncrna.pkl", "data/df_step3_bykey_ncrna_with_similarity.pkl",
      ["transcripts_counts.pdf","transcripts-count-nc.pdf"]),
 ]:
     log(f"===== {tag}")
