@@ -226,7 +226,6 @@ data/
 *.fasta
 
 # Per-analysis outputs
-rnakg_non_overlapping/data/
 gtex_ncrna_expression/data/
 gtex_ncrna_expression/cache/
 gtex_ncrna_expression/figures/
