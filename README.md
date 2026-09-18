@@ -14,18 +14,18 @@ Zenodo (DOI to be added) and is deliberately excluded from version control.
 
 | | interactions | share |
 |---|---:|---:|
-| mRNA-associated | 7,329,973 | 98.4 % |
+| mRNA-associated | 7,332,037 | 98.4 % |
 | ncRNA–ncRNA | 119,365 | 1.6 % |
-| **total** | **7,449,338** | |
+| **total** | **7,451,402** | |
 
 Built from 9,429,404 curated RNAInter interactions; those whose partners could
-not both be sequence-resolved are dropped. The result covers **174,248 unique
-RNA entities** (135,116 mRNA, 39,132 ncRNA) across 56 species (NCBI Taxonomy
+not both be sequence-resolved are dropped. The result covers **174,319 unique
+RNA entities** (135,183 mRNA, 39,136 ncRNA) across 56 species (NCBI Taxonomy
 identifiers; RNAInter lists dog under two names, *Canis familiaris* and
-*Canis lupus familiaris*, both taxid 9615) and 14 RNA biotypes, carrying 795,593
+*Canis lupus familiaris*, both taxid 9615) and 14 RNA biotypes, carrying 796,477
 distinct transcript sequences. Because entities keep
 every recovered isoform rather than one representative, expanding interactions
-to transcript level gives 91,559,557 pairs.
+to transcript level gives 91,665,313 pairs.
 
 ## Pipeline
 
@@ -36,11 +36,19 @@ Run the notebooks in order from the repository root.
 | 1 | `1_RNAInter_sequence_map.ipynb` | filter RNAInter records, standardise species to NCBI taxids, parse identifiers into namespace buckets, emit the non-redundant RNA-entity table |
 | 2a | `2_sequence_map_ncRNA.ipynb` | resolve ncRNA entities to transcripts via RNAcentral, miRBase, circBase, NCBI/RefSeq and Ensembl |
 | 2b | `2_sequence_map_mRNA.ipynb` | resolve mRNA entities to RefSeq/Ensembl transcripts |
-| 3 | `3_Interactions_map.ipynb` | project sequences and metadata back onto both partners; keep interactions where both are sequence-resolved |
+| 2c | `2c_refetch_refseq_failures.py` | re-fetch the RefSeq accessions lost to failed efetch batches in the original run and rebuild the mRNA entity table (see below) |
+| 3 | `3_interactions_map.py` (script form of `3_Interactions_map.ipynb`) | project sequences and metadata back onto both partners; keep interactions where both are sequence-resolved; the transcript accessions of mRNA entities are retained |
 | — | `similarity_computation.py` | pairwise global identity between the isoforms of an entity (batch job) |
 | — | [`rnacentral-etl`](https://github.com/AnacletoLAB/rnacentral-etl) | submodule: DuckDB ETL over the RNAcentral FTP distribution |
 
-Statistics and figures: `ncRNAInter_stats.ipynb`, `mRNAInter_stats.ipynb`.
+Statistics and figures: `ncRNAInter_stats.ipynb`, `mRNAInter_stats.ipynb`
+(the `*_union.ipynb` copies read the newest release);
+`paper_figures/05_paper_numbers.py` recomputes every number quoted in the
+manuscript from the current release (`data/paper_numbers_<date>.json`) and is
+the authoritative source of those numbers, the notebooks being the record of
+the original analysis; and
+`zenodo_release/build_release.py` assembles the release folder (pickles, TSV,
+FASTA, checksums).
 The `*_union.ipynb` copies are the same notebooks pointed at the current
 release, used to regenerate the figures after the mapping change described
 below. `paper_figures/` holds the scripts that produce the panels as they
@@ -92,15 +100,19 @@ them by species name without identifiers, which double-counted dog.
    sub-analysis, the GTEx Portal API v2. `ete3` downloads the NCBI taxonomy
    dump on first use.
 6. **Run order**: `1_RNAInter_sequence_map.ipynb` → `2_sequence_map_ncRNA.ipynb`
-   → `2_sequence_map_mRNA.ipynb` → `3_Interactions_map.ipynb` (writes the
-   release, `data/interactions_with_sequences_RNA_RNA_<date>.pkl`; the figure
+   → `2_sequence_map_mRNA.ipynb` → `2c_refetch_refseq_failures.py` (only needed
+   to repair a run whose efetch batches failed; the fetch cell of 2b now retries
+   failed batches one accession at a time and reads every
+   `data/refseq_sequences_cache*.json`) → `3_interactions_map.py` (writes the
+   release, `data/interactions_with_sequences_RNA_RNA_union_<date>.pkl`; the figure
    scripts pick the newest `*_union_*.pkl`) → `mRNAInter_stats_union.ipynb` /
    `ncRNAInter_stats_union.ipynb` (evidence, GO/Rfam statistics; the mRNA
    notebook dumps its multi-transcript table to `data/df_step3_union.pkl` for
    `similarity_computation.py`, a batch job whose input/output paths are set at
    the top of the script, and reads the `*_with_similarity.pkl` result back) →
-   the `paper_figures/` scripts → `gtex_ncrna_expression/` (own README).
-7. **Resources**: the release table is a 5.8 GB pickle of Python objects and
+   the `paper_figures/` scripts (`00b`, `01`–`05`) → `gtex_ncrna_expression/` (own README)
+   → `zenodo_release/build_release.py`.
+7. **Resources**: the release table is a 6.0 GB pickle of Python objects and
    takes ≈ 15 GB of RAM to load (more for the per-row expansions in the stats
    notebooks); the pairwise-identity step is CPU-bound
    (≈ 10<sup>13</sup> alignment cells for the mRNA set, minutes on 48 cores
@@ -125,8 +137,19 @@ by the entity's taxonomy id and checked for RNA-biotype consistency.
 
 Both the ncRNA and the mRNA pipeline now apply gene-symbol mapping to **all**
 entities and merge by union. The mRNA side previously used it only as a
-fallback for entities left unresolved; making the two symmetric resolves 2,844
-additional entities and adds 8,092 transcript accessions.
+fallback for entities left unresolved; making the two symmetric gives a symbol
+match to 181,262 mRNA entities: 2,844 of them had no RefSeq accession from the
+NCBI Gene step (152 were already resolved through Ensembl, 2,692 are resolved
+only here) and 2,729 gain further accessions (8,092 accession slots added on top
+of the NCBI Gene step). The three steps assign at least one accession to
+194,559 + 318 + 2,692 = 197,569 mRNA entities, and all of them are
+sequence-resolved in the current release. In the March 2026 run 29 batch
+requests to NCBI efetch (1,450 accessions) had failed and were never retried, so
+that 78 entities had no sequence and 491 lacked 1,352 isoforms (197,491
+sequence-resolved entities); `2c_refetch_refseq_failures.py` re-fetched them on
+18-09-2026 into `data/refseq_sequences_cache_refetch_18-09-2026.json`, rebuilt
+the mRNA entity table and the release was regenerated (+78 entities, +2,064
+interactions, +1,494 sequences).
 
 ## Requirements
 

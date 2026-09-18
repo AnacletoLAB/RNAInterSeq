@@ -26,8 +26,16 @@ Derived interaction columns:
   both_seq_confirmed -- both partners have sequence-confirmed transcripts
   shared_expressed_tissues -- sorted list of tissues where both partners have TPM > 0
   n_shared_expressed_tissues -- len of the above
-  shared_tissue_systems    -- sorted list of systems shared by both partners
+  shared_tissue_systems    -- sorted list of the systems to which the shared
+                              expressed tissues belong (non-empty only when the
+                              two partners are detected in the same tissue)
   n_shared_tissue_systems  -- len of the above
+  shared_systems           -- sorted list of systems in which BOTH partners are
+                              detected, i.e. the intersection of ent1_tissue_systems
+                              and ent2_tissue_systems (the partners may be detected
+                              in different tissues of the same system); a superset
+                              of shared_tissue_systems, sequence-confirmed pairs only
+  n_shared_systems         -- len of the above
 
 Output: data/human_ncrna_interactions_gtex_annotated.pkl
 """
@@ -237,6 +245,11 @@ def annotate(interactions, lookup):
 
     result["shared_tissue_systems"]   = result["shared_expressed_tissues"].apply(_to_systems)
     result["n_shared_tissue_systems"] = result["shared_tissue_systems"].str.len()
+    # system-level sharing proper: both partners detected somewhere in the same system
+    result["shared_systems"] = [
+        sorted(set(a) & set(b)) if conf else []
+        for a, b, conf in zip(result["ent1_tissue_systems"], result["ent2_tissue_systems"], both_conf)]
+    result["n_shared_systems"] = result["shared_systems"].str.len()
 
     return result
 
@@ -268,6 +281,8 @@ def main():
     print(f"  Both partners GTEx-matched:     {n_both:,} ({n_both/n:.1%})")
     print(f"  Both seq-confirmed:             {n_both_conf:,} ({n_both_conf/n:.1%})")
     print(f"  >=1 shared expressed tissue:    {n_shared_any:,} ({n_shared_any/n:.1%})")
+    n_shared_sys = (annotated["n_shared_systems"] > 0).sum()
+    print(f"  >=1 shared biological system:   {n_shared_sys:,} ({n_shared_sys/n:.1%})")
     med_shared = annotated.loc[annotated["both_seq_confirmed"], "n_shared_expressed_tissues"].median()
     print(f"  Median shared tissues (both-confirmed pairs): {med_shared:.0f}")
 

@@ -1,0 +1,34 @@
+{
+  "RNAInterSeq_entities.tsv.gz": {
+    "md5": "00702533280626e23daa37e3cb0db171",
+    "bytes": 10044273
+  },
+  "RNAInterSeq_human_ncRNA_GTEx.pkl": {
+    "md5": "4d126d70e5bb9564189aa5df95ff6ecb",
+    "bytes": 97470142,
+    "rows": 81175,
+    "cols": 59
+  },
+  "RNAInterSeq_human_ncRNA_GTEx.tsv.gz": {
+    "md5": "e39b87739189e497f4fd656a9063bf49",
+    "bytes": 8846431
+  },
+  "RNAInterSeq_interactions.tsv.gz": {
+    "md5": "8263d196fed9c82bb5531b29401075b4",
+    "bytes": 132616153
+  },
+  "RNAInterSeq_interactions_full.pkl": {
+    "md5": "13f7c38c644c21f7ae015dcfbbdc07cf",
+    "bytes": 5983783235,
+    "rows": 7451402,
+    "cols": 37
+  },
+  "RNAInterSeq_transcripts.fasta.gz": {
+    "md5": "863547e14f764b143d2fda803bef2a82",
+    "bytes": 345858823
+  },
+  "RNAInterSeq_transcripts.tsv.gz": {
+    "md5": "f6e7750ecb0b1ad2a33e5cc87e89204f",
+    "bytes": 7469345
+  }
+}

@@ -1,0 +1,7 @@
+00702533280626e23daa37e3cb0db171  data/RNAInterSeq_entities.tsv.gz
+4d126d70e5bb9564189aa5df95ff6ecb  data/RNAInterSeq_human_ncRNA_GTEx.pkl
+e39b87739189e497f4fd656a9063bf49  data/RNAInterSeq_human_ncRNA_GTEx.tsv.gz
+8263d196fed9c82bb5531b29401075b4  data/RNAInterSeq_interactions.tsv.gz
+13f7c38c644c21f7ae015dcfbbdc07cf  data/RNAInterSeq_interactions_full.pkl
+863547e14f764b143d2fda803bef2a82  data/RNAInterSeq_transcripts.fasta.gz
+f6e7750ecb0b1ad2a33e5cc87e89204f  data/RNAInterSeq_transcripts.tsv.gz

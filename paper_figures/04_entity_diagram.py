@@ -2,15 +2,15 @@
 
 Replaces the ASCII-art rendering with the same visual language as
 03_flow_diagram.py (rounded boxes, cream input, blue ncRNA, green mRNA, orange
-result), and updates the three counts that the symmetric gene symbol mapping
-changed: mRNA sequence-resolved 197,490 -> 197,491, mRNA unresolved
-16,233 -> 16,232 and the overall total 238,401 -> 238,402.
+result). The mRNA count is read from the newest processed mRNA table, so the
+figure follows the pipeline: 197,490 (fallback symbol mapping) -> 197,491
+(symmetric symbol mapping, Sep 2026) -> the value after the re-fetch of the
+RefSeq accessions lost to failed efetch batches (2c_refetch_refseq_failures.py).
 
-Counts are verified against the pipeline tables:
+Fixed counts, verified against the pipeline tables:
   data/nc_rna_entities_to_be_processed.pkl   76,961 rows
   data/m_rna_entities_to_be_processed.pkl   213,723 rows
   data/nc_rna_entities_processed.pkl         40,911 rows, all with >=1 sequence
-  mRNA resolved / total entries             197,491 / 238,402 (rebuild log)
 """
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -21,11 +21,15 @@ ORANGE="#FFE6CC"; ORANGE_E="#D79B00"
 GREEN="#D5E8D4"; GREEN_E="#82B366"
 BLUE="#DAE8FC"; BLUE_E="#6C8EBF"
 
-NC_ALL, MR_ALL = 76_961, 213_723
-NC_RES, MR_RES = 40_911, 197_491
+import glob, json, pandas as pd
+NC_ALL, MR_ALL = 76_961, 213_723            # data/*_rna_entities_to_be_processed.pkl
+NC_RES = 40_911                             # data/nc_rna_entities_processed.pkl
+# mRNA: the newest processed table (2c_refetch_refseq_failures.py rebuilt it with the re-fetched accessions)
+MR_TABLE = sorted(glob.glob("data/m_rna_entities_processed_union*.pkl"))[-1]
+MR_RES = len(pd.read_pickle(MR_TABLE).index)
 ALL = NC_ALL + MR_ALL
 RES = NC_RES + MR_RES
-assert (ALL, RES) == (290_684, 238_402)
+print(f"{MR_TABLE}: {MR_RES:,} sequence-resolved mRNA-entities -> {RES:,} overall")
 
 fig, ax = plt.subplots(figsize=(9.2, 8.2))
 ax.set_xlim(0, 10); ax.set_ylim(0, 9.6); ax.axis("off")

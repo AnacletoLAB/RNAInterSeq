@@ -215,8 +215,13 @@ __marimo__/
 # The dataset is distributed via Zenodo, not through this repository.
 # ---------------------------------------------------------------
 
-# Zenodo publication package (assembled locally, uploaded by hand)
-zenodo_release/
+# Zenodo publication package (assembled locally by zenodo_release/build_release.py,
+# uploaded by hand): the data files stay out, the build script, README and checksums are tracked
+zenodo_release/*
+!zenodo_release/build_release.py
+!zenodo_release/README.md
+!zenodo_release/CHECKSUMS.json
+!zenodo_release/CHECKSUMS.md5
 
 # Raw inputs, intermediates and released tables
 data/
@@ -233,6 +238,7 @@ gtex_ncrna_expression/*.pdf
 
 # Manuscript (kept out of the public code repository)
 latex_paper/
+paper_final/
 
 # Notebook checkpoints
 .ipynb_checkpoints/

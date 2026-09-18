@@ -71,7 +71,7 @@ Support modules (not run directly):
    → `data/ncrna_entity_locus_summary.pkl`, `figures/Fig1-Fig5.pdf`
 
 5. **`06_annotate_interactions.py`** — joins all entity-level GTEx metadata
-   onto the 81,175 human-human interaction rows. Adds 24 columns per
+   onto the 81,175 human-human interaction rows. Adds 26 columns per
    interaction: per-entity confirmed transcripts, tau, peak tissue, peak
    TPM, 54-tissue TPM vector, biological system lists, plus shared-tissue
    and shared-system summary columns for each pair.
@@ -87,8 +87,8 @@ Support modules (not run directly):
 
 ## Output columns in the annotated interaction table
 
-The final table (`human_ncrna_interactions_gtex_annotated.pkl`, 81,175 × 57)
-extends the original 33 RNAInterSEQ columns with 24 GTEx annotation columns:
+The final table (`human_ncrna_interactions_gtex_annotated.pkl`, 81,175 × 59)
+extends the original 33 RNAInterSEQ columns with 26 GTEx annotation columns:
 
 | Column | Description |
 |---|---|
@@ -105,8 +105,10 @@ extends the original 33 RNAInterSEQ columns with 24 GTEx annotation columns:
 | `both_seq_confirmed` | Both partners have sequence-confirmed transcripts |
 | `shared_expressed_tissues` | Sorted list of tissues where both TPM > 0 |
 | `n_shared_expressed_tissues` | Count of shared expressed tissues |
-| `shared_tissue_systems` | Sorted list of biological systems shared by both partners |
-| `n_shared_tissue_systems` | Count of shared biological systems |
+| `shared_tissue_systems` | Sorted list of the biological systems to which the shared expressed tissues belong (non-empty only if the partners share a tissue) |
+| `n_shared_tissue_systems` | Count of the above |
+| `shared_systems` | Sorted list of biological systems in which both partners are detected (intersection of `ent1_tissue_systems` and `ent2_tissue_systems`; the partners may be detected in different tissues of the same system); sequence-confirmed pairs only |
+| `n_shared_systems` | Count of shared biological systems |
 
 ### Tissue system grouping
 

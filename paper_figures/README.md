@@ -38,10 +38,18 @@ by-key tables give 168,329 and 14,631 entities; per-entity alignments are
 reused wherever the transcript set is unchanged. `01` also merges the two dog
 names before counting species pairs.
 
-`experimental_evidence_type.pdf` is deliberately not regenerated. The notebook
-builds it from a hand-curated method-to-category map rather than from a plain
-split of an evidence field, and the strong/weak evidence strings it summarises
-are untouched by the rebuild, so that panel remains the notebook output.
+`experimental_evidence_type.pdf` is produced by `06_evidence_panel.py` from the
+evidence-method categories computed in `05_paper_numbers.py`, which ports the
+hand-curated method-to-category map of `mRNAInter_stats.ipynb` (cells 24–26)
+verbatim; the ncRNA–ncRNA panel and Table 4 of the manuscript reproduce the
+notebook values exactly, which validates the port.
+
+`05_paper_numbers.py` recomputes every number quoted in the manuscript from the
+newest release (`data/paper_numbers_<date>.json`): interaction, entity, species
+and sequence counts, transcript-level pairs, evidence categories, GO/Rfam
+coverage, biotype/species-pair landscapes, per-entity length, multiplicity and
+identity statistics. `03`/`04` read their counts from that file and from the
+processed mRNA table, so they follow the pipeline instead of hardcoding values.
 
 The notebooks are left as the record of the original analysis; these scripts are
 the provenance of the panels that appear in the paper.
@@ -53,9 +61,15 @@ python 00_ncrna_similarity.py     # ncRNA transcript-similarity table (only if a
 python 00b_entity_tables_by_key.py  # entity tables keyed by (symbol, biotype, taxid, ids) + similarity
 python 01_interaction_figures.py  # interaction-level panels, both subsets
 python 02_entity_figures.py       # entity-level panels, both subsets
+python 05_paper_numbers.py        # data/paper_numbers_<date>.json (needed by 03 and 06)
+python 06_evidence_panel.py       # experimental_evidence_type.pdf, both subsets
 python 03_flow_diagram.py <out.png>   # fig/flow_RNA_RNA_inter.png
 python 04_entity_diagram.py <out.png> # fig/RNA_entities_plot.png
 ```
+
+`00b` and `05` run under the `rnacentral` env (pandas ≥ 2.3, numpy 2, Biopython);
+the plotting scripts need matplotlib/seaborn with numpy 2 (the `vGenRNA` env), since
+the release pickles are not readable with numpy 1.x.
 
 Steps 01–02 write into `data/mrna_stats_union/` and `data/ncrna_stats_union/`;
 copy the PDFs into the manuscript's `fig/mrna_stats/` and `fig/ncrna_stats/`.

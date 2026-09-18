@@ -1,5 +1,7 @@
 """flow_RNA_RNA_inter: interaction filtering and sequence support.
 Adds the final split into mRNA-associated and ncRNA-ncRNA records (EC).
+The release-dependent counts are read from data/paper_numbers_<date>.json
+(05_paper_numbers.py); the two RNAInter counts (raw, curated) are fixed.
 Palette matches the draw.io schemas: cream input, orange intermediate,
 green terminal."""
 import matplotlib; matplotlib.use("Agg")
@@ -10,6 +12,12 @@ CREAM="#FFF2CC"; CREAM_E="#D6B656"
 ORANGE="#FFE6CC"; ORANGE_E="#D79B00"
 GREEN="#D5E8D4"; GREEN_E="#82B366"
 BLUE="#DAE8FC"; BLUE_E="#6C8EBF"
+
+import glob, json
+# interaction and entity counts of the current release (paper_figures/05_paper_numbers.py)
+N = json.load(open(sorted(glob.glob("data/paper_numbers_*.json"))[-1]))
+I, E = N["interactions"], N["entities"]
+print("release:", N["release"], I, E)
 
 fig, ax = plt.subplots(figsize=(9.2, 7.4))
 ax.set_xlim(0, 10); ax.set_ylim(0, 8.6); ax.axis("off")
@@ -37,7 +45,7 @@ arrow(5, 5.47, 5, 4.83)
 ax.text(5.12, 5.15, "both partners resolved to\n$\\geq$ 1 transcript sequence",
         ha="left", va="center", fontsize=9.5, color="#555555")
 
-box(5, 4.25, W, H, "Sequence-supported RNA–RNA interactions", "7,449,338", ORANGE, ORANGE_E)
+box(5, 4.25, W, H, "Sequence-supported RNA–RNA interactions", f"{I['total']:,}", ORANGE, ORANGE_E)
 
 # split
 ax.plot([5, 5], [3.67, 3.25], color="#444444", linewidth=1.5)
@@ -45,13 +53,13 @@ ax.plot([2.6, 7.4], [3.25, 3.25], color="#444444", linewidth=1.5)
 arrow(2.6, 3.25, 2.6, 2.72)
 arrow(7.4, 3.25, 7.4, 2.72)
 
-box(2.6, 2.15, 4.3, 1.15, "mRNA-associated", "7,329,973", GREEN, GREEN_E, fs=13, vfs=15)
-ax.text(2.6, 1.42, "98.4 %", ha="center", va="center", fontsize=11, color="#555555")
-box(7.4, 2.15, 4.3, 1.15, "ncRNA–ncRNA", "119,365", BLUE, BLUE_E, fs=13, vfs=15)
-ax.text(7.4, 1.42, "1.6 %", ha="center", va="center", fontsize=11, color="#555555")
+box(2.6, 2.15, 4.3, 1.15, "mRNA-associated", f"{I['mrna']:,}", GREEN, GREEN_E, fs=13, vfs=15)
+ax.text(2.6, 1.42, f"{I['mrna_pct']:.1f} %", ha="center", va="center", fontsize=11, color="#555555")
+box(7.4, 2.15, 4.3, 1.15, "ncRNA–ncRNA", f"{I['ncrna']:,}", BLUE, BLUE_E, fs=13, vfs=15)
+ax.text(7.4, 1.42, f"{I['ncrna_pct']:.1f} %", ha="center", va="center", fontsize=11, color="#555555")
 
-ax.text(5, 0.72, "174,248 unique sequence-resolved RNA entities\n"
-                 "(135,116 mRNA · 39,132 ncRNA)",
+ax.text(5, 0.72, f"{E['total']:,} unique sequence-resolved RNA entities\n"
+                 f"({E['mrna']:,} mRNA · {E['ncrna']:,} ncRNA)",
         ha="center", va="center", fontsize=10.5, color="#333333")
 
 plt.tight_layout()

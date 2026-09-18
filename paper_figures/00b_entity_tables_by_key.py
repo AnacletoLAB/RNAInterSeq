@@ -61,21 +61,25 @@ def main():
     log("loading", PATH)
     df = pd.read_pickle(PATH)
     is_m = df.Category1.eq("mRNA") | df.Category2.eq("mRNA")
-    for tag, sub, prev_f in [("mrna", df[is_m], "data/df_step3_union_with_similarity.pkl"),
-                             ("ncrna", df[~is_m], "data/df_step3_ncrna_with_similarity.pkl")]:
+    # previous per-entity results, reused where the transcript set is unchanged: the notebook
+    # tables and, when present, the by-key tables of an earlier run of this script
+    for tag, sub, prev_fs in [("mrna", df[is_m], ["data/df_step3_union_with_similarity.pkl", "data/df_step3_bykey_mrna_with_similarity.pkl"]),
+                              ("ncrna", df[~is_m], ["data/df_step3_ncrna_with_similarity.pkl", "data/df_step3_bykey_ncrna_with_similarity.pkl"])]:
         log(f"===== {tag}: {len(sub)} interactions")
         e = build_entity_table(sub)
         log(" entities by pipeline key:", len(e), "| taxids:", e.taxid.nunique(), "| species names:", e.species.nunique())
         e.drop(columns=["valid"]).to_pickle(f"data/entities_bykey_{tag}.pkl")
         # ---- similarity: reuse where the filtered transcript set is unchanged ----
-        prev = pd.read_pickle(prev_f)
         prev_stats = {}
-        for sl, npairs, ms, md, mn, mx, vs in zip(prev.seq_list_filtered, prev.n_pairs, prev.mean_sim,
-                                                  prev.median_sim, prev.min_sim, prev.max_sim, prev.var_sim):
-            sl = sl if isinstance(sl, list) else eval(sl)
-            prev_stats[tuple(sorted(sl))] = dict(n_pairs=int(npairs), mean_sim=float(ms), median_sim=float(md),
-                                                 min_sim=float(mn), max_sim=float(mx), var_sim=float(vs))
-        del prev
+        for prev_f in prev_fs:
+            if not os.path.exists(prev_f): continue
+            prev = pd.read_pickle(prev_f)
+            for sl, npairs, ms, md, mn, mx, vs in zip(prev.seq_list_filtered, prev.n_pairs, prev.mean_sim,
+                                                      prev.median_sim, prev.min_sim, prev.max_sim, prev.var_sim):
+                sl = sl if isinstance(sl, list) else eval(sl)
+                prev_stats[tuple(sorted(sl))] = dict(n_pairs=int(npairs), mean_sim=float(ms), median_sim=float(md),
+                                                     min_sim=float(mn), max_sim=float(mx), var_sim=float(vs))
+            log(f" previous results from {prev_f}: {len(prev_stats)} transcript sets"); del prev
         e["seq_list_filtered"] = e.valid.apply(lambda v: [s for s in v if len(s) <= MAX_LEN[tag]])
         e["n_transcripts_filtered"] = e.seq_list_filtered.apply(len)
         st = e[e.n_transcripts_filtered >= 2].copy().reset_index(drop=True)
